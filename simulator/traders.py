@@ -151,11 +151,11 @@ class BasicTrader(Trader):
         price = self.get_price(side, self.market.getIdealETHValue())
         
         order1 = {'type': 'limit', 'price': price, 'tid': self.tid, 'side': side, 'qty': qty}
-        
-        other_side = 'bid' if side == 'ask' else 'ask'
-        order2 = {'type': 'limit', 'price': self.market.usd_eth, 'tid': self.tid, 'side': other_side, 'qty': qty}
-        
-        return [order1, order2]
+        return [order1]
+
+        # other_side = 'bid' if side == 'ask' else 'ask'
+        # order2 = {'type': 'limit', 'price': self.market.usd_eth, 'tid': self.tid, 'side': other_side, 'qty': qty}
+        # return [order1, order2]
 
 trader_dict = {'IdealTrader': IdealTrader, 'AverageTrader': AverageTrader, 'TrendMaker': TrendMaker, 
                'BasicTrader': BasicTrader, 'InvestorTrader': InvestorTrader}

@@ -36,5 +36,4 @@ def plot_prices(market, price_func, bin_size=50, warmup=100, ideal_dev=0.1, titl
     plt.ylim(1.0 - ideal_dev * 5, 1.0 + ideal_dev * 5)
     plt.title(title)
     plt.ylabel('USD price')
-    plt.xlabel('Steps [1 = 50 steps]')
     plt.legend()
