@@ -1,7 +1,7 @@
 from collections import defaultdict
 from .PyLOB import OrderBook
 from .constants import *
-
+from .traders import InvestorTrader
 import numpy as np
 
 class Market:
@@ -23,7 +23,6 @@ class Market:
         self.bidVolume = 0
         self.totalVolume = 0
         self.volMAvel = 1. / VOL_MA_STEPS
-        self.circulation = 0
         self.priceMAvel = 1. / PRICE_MA_STEPS
         
     def setTraderPool(self, traderPool):
@@ -40,7 +39,7 @@ class Market:
     def getIdealETHValue(self):
         return self.marketSpeed * self.usd_eth + (1 - self.marketSpeed) * self.getCurrentETHValue()
         
-    def getCurrentUSDValue(self, func_type='avg_fair'):
+    def getCurrentUSDValue(self, func_type='wavg_fair'):
         return self.getCurrentETHValue(func_type) / self.usd_eth
         
     ''' Returns the value of BASIS in USD '''
@@ -73,7 +72,15 @@ class Market:
     def updateDemandRatio(self, factor):
         self.demandRatio *= factor
         self.demandRatio = np.clip(self.demandRatio, 0.1, 1.0)
-        
+    
+    def getCirculation(self):
+        circulation = 0
+        for trader in self.traderPool.values():
+            if isinstance(trader, InvestorTrader):
+                continue
+            circulation += trader.bas
+        return circulation
+
     def getMAprice(self):
         return self.prices['MAday'][-1]
         
@@ -108,9 +115,6 @@ class Market:
             askVolDelta += volumeTraded
         if quote['side'] == 'ask':
             bidVolDelta += volumeTraded
-        
-        self.circulation += quote['qty']
-        self.circulation -= 2 * volumeTraded
 
         self.bidVolume = self.bidVolume * (1 - self.volMAvel) + bidVolDelta * self.volMAvel
         self.askVolume = self.askVolume * (1 - self.volMAvel) + askVolDelta * self.volMAvel

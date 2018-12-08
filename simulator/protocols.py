@@ -45,18 +45,15 @@ class BasisProtocol(Protocol):
         
         if self.currentStep < self.lastAuction + self.delay:
             return
-        
+
         # ISSUE bonds
         if price < LOWER:
-            
-            newSupply = price * self.market.circulation
-            bondsToCreate = self.market.circulation - newSupply 
+            bondsToCreate = (1. - price) * self.market.getCirculation() 
             self.bondsForAuction += bondsToCreate
             self.lastAuction = self.currentStep
             
         elif price > UPPER:
-            newSupply = price * self.market.circulation
-            basisToCreate = newSupply - self.market.circulation
+            basisToCreate = (price - 1.) * self.market.getCirculation() 
             self.lastAuction = self.currentStep
             
             while len(self.bondQueue) and basisToCreate:

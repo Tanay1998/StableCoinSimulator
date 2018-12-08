@@ -2,16 +2,14 @@ from random import randint
 from numpy.random import normal
 
 from .constants import *
-from .utils import *
-from .market import Market
-from .protocols import BasisProtocol
+from .utils import clamp_bas_qty, clamp_bas_price, biased_coin
 
 class Trader: 
     def __init__(self, tid, protocol, market):
         self.tid = tid
         self.protocol = protocol
         self.market = market
-        self.portfolioRatio = 0.5
+        self.riskRatio = 0.5
         self.eth = 10
         self.bas = 1000
         self.bondsLiquidated = 0
@@ -30,7 +28,7 @@ class Trader:
         return clamp_bas_price(price)
         
     def get_qty(self):
-        qty_mu = self.portfolioRatio
+        qty_mu = self.riskRatio
         qty_sigma = qty_mu * 0.1
         qty = normal(qty_mu, qty_sigma) * self.bas
         return clamp_bas_qty(qty)
@@ -39,7 +37,7 @@ class Trader:
         return self.eth * 100 + self.bas
 
     def marketStep(self):
-        return None
+        return []
     
 '''
     IdealTrader buys/sells according to market demand. 
@@ -49,7 +47,7 @@ class IdealTrader(Trader):
     def __init__(self, tid, protocol, market):
         super().__init__(tid, protocol, market)
         self.bas = int(1e5) # $100,000 in BASIS 
-        self.portfolioRatio = 0.05
+        self.riskRatio = 0.05
         
     def marketStep(self):
         # Randomly select bid / ask based on market demand
@@ -59,18 +57,18 @@ class IdealTrader(Trader):
         qty = self.get_qty()
 
         if qty <= 0:
-            return None
+            return []
         
         # Set price around BASE_PRICE
         price = self.get_price(side, self.market.usd_eth)
         
         order = {'type': 'limit', 'price': price, 'tid': self.tid, 'side': side, 'qty': qty}
-        return order
+        return [order]
     
-class RandomTrader(Trader): 
+class AverageTrader(Trader): 
     def __init__(self, tid, protocol, market):
         super().__init__(tid, protocol, market)
-        self.portfolioRatio = 0.05
+        self.riskRatio = 0.05
         self.bas = int(1e4)
         
     def marketStep(self):
@@ -78,16 +76,16 @@ class RandomTrader(Trader):
         qty = self.get_qty()
         
         if qty <= 0:
-            return None
+            return []
         
         # Randomly select bid / ask based on market demand
         side = ['ask', 'bid'][biased_coin(self.market.demandRatio)]
         
         # Try to see if need for BAS can be satisfied with liquidated bonds
         if side == 'bid' and self.bondsLiquidated:
-            if self.bondsLiquidated > qty:
+            if self.bondsLiquidated >= qty:
                 self.bondsLiquidated -= qty
-                return None
+                return []
             else:
                 qty -= self.bondsLiquidated
                 self.bondsLiquidated = 0
@@ -102,19 +100,19 @@ class RandomTrader(Trader):
             burntBasis = price * qty
             self.bas -= burntBasis
             self.protocol.totalSupply -= burntBasis
-            return None
+            return []
         
         # Set price around BASE_PRICE
         price = self.get_price(side, self.market.getIdealETHValue())
         
         order = {'type': 'limit', 'price': price, 'tid': self.tid, 'side': side, 'qty': qty}
-        return order
+        return [order]
 
     
 class InvestorTrader(Trader): 
     def __init__(self, tid, protocol, market):
         super().__init__(tid, protocol, market)
-        self.portfolioRatio = 0.001
+        self.riskRatio = 0.001
         self.bas = int(1e7)
         self.eth = 1000
     
@@ -124,7 +122,7 @@ class TrendMaker(Trader):
 class BasicTrader(Trader): 
     def __init__(self, tid, protocol, market):
         super().__init__(tid, protocol, market)
-        self.portfolioRatio = 0.05
+        self.riskRatio = 0.05
         self.threshold = BASIC_TRADER_THRESHOLD
         self.bas = int(1e4)
         
@@ -133,7 +131,7 @@ class BasicTrader(Trader):
         qty = self.get_qty()
         
         if qty <= 0:
-            return None
+            return []
         
         # Randomly select bid / ask based on market demand
         if self.market.getCurrentUSDValue() <= 1.0 - self.threshold:
@@ -141,21 +139,25 @@ class BasicTrader(Trader):
         elif self.market.getCurrentUSDValue() >= 1.0 + self.threshold:
             side = 'ask'
         else:
-            return None
+            return []
         
         if self.market.demandRatio < 0.2 and side == 'bid':
-            return None
+            return []
         
         if self.market.demandRatio > 0.8 and side == 'ask':
-            return None
+            return []
         
         # Set price around BASE_PRICE
         price = self.get_price(side, self.market.getIdealETHValue())
         
-        order = {'type': 'limit', 'price': price, 'tid': self.tid, 'side': side, 'qty': qty}
-        return order
+        order1 = {'type': 'limit', 'price': price, 'tid': self.tid, 'side': side, 'qty': qty}
+        
+        other_side = 'bid' if side == 'ask' else 'ask'
+        order2 = {'type': 'limit', 'price': self.market.usd_eth, 'tid': self.tid, 'side': other_side, 'qty': qty}
+        
+        return [order1, order2]
 
-trader_dict = {'IdealTrader': IdealTrader, 'RandomTrader': RandomTrader, 'TrendMaker': TrendMaker, 
+trader_dict = {'IdealTrader': IdealTrader, 'AverageTrader': AverageTrader, 'TrendMaker': TrendMaker, 
                'BasicTrader': BasicTrader, 'InvestorTrader': InvestorTrader}
 
 

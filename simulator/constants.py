@@ -1,4 +1,3 @@
-from .utils import months_to_seconds
 from collections import OrderedDict
 
 # ETH trading settings
@@ -6,19 +5,19 @@ ETH_DAY_OFFSET = 0
 TRADES_PER_DAY = 15000
 
 # BOND settings
-BOND_EXPIRY = months_to_seconds(60)
-BOND_DELAY = 20000 # Steps 
-BOND_RANGE = (0.99, 1.01)
+BOND_EXPIRY = 60 * (30 * 24 * 60 * 60) # 60 months
+BOND_DELAY = 15000 # Steps 
+BOND_RANGE = (0.95, 1.05)
 
 # MARKET price settings 
 BASE_SPREAD = 1e-3 # 0.1% 
 PRICE_NOISE = 1e-4
 VOL_MA_STEPS = 1000
 PRICE_MA_STEPS = 1000
-MARKET_SPEED = 0.8
+MARKET_SPEED = 0.2
 
 # DEMAND ratio settings
-PRICE_SCALE = 0#1e-3
+PRICE_SCALE = 1e-4
 VAR_SCALE = 0#1e-3
 
 # TRADER settings
@@ -26,14 +25,14 @@ BASIC_TRADER_THRESHOLD = 0.05 # trades when BAS < 0.95 or BAS > 1.05
 
 # TRADER demographics 
 trader_demographics = OrderedDict()
-trader_demographics['IdealTrader'] = 5
-trader_demographics['RandomTrader'] = 500
-trader_demographics['BasicTrader'] = 100
+trader_demographics['IdealTrader'] = 10
+trader_demographics['AverageTrader'] = 500
+trader_demographics['BasicTrader'] = 200
 trader_demographics['InvestorTrader'] = 5
 
 # SIMULATION SETTINGS 
 NUM_ORDERS_INIT = PRICE_MA_STEPS * 3
-NUM_ORDERS_LIVE = 100000
+NUM_ORDERS_LIVE = 500000
 
 # TRACKING settings 
 TRACK_FREQ = 100 # Track every 50 steps
